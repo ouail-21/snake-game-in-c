@@ -83,6 +83,7 @@ int main(){
     Uint64 lastTick = 0;
     Uint32 frames = 0;
     bool pause = false;
+    Uint16 number_of_apples = 0;
     while(running){
         /* event handling. */
         while(SDL_PollEvent(&event)){
@@ -124,6 +125,7 @@ int main(){
             }
             if(is_collide_with_bonderies(snake) || is_collide_with_itself(snake)){
                 snake.snake[0].pos = (Vector2d){.x = 0 , .y = 0};
+                number_of_apples = snake.tail;
                 snake.tail = 0;
                 snake.snake[0].dir = (Vector2d)RIGHT;
                 pause = true;
@@ -137,7 +139,9 @@ int main(){
             SDL_SetRenderDrawColor(ren,0,0,0,255);/* Set the drawing color.*/
             SDL_RenderClear(ren); /* clear the previous frame*/
             SDL_SetRenderDrawColor(ren,150,60,93,255);/* Set the drawing color.*/
-            SDL_RenderDebugText(ren, 70, 250, "do you want to retry? enter 'y' or 'n' to stop");
+            char title[70];
+            snprintf(title,sizeof(title), "you got %d do you want to retry? enter 'y' or 'n' to stop",number_of_apples);
+            SDL_RenderDebugText(ren, 35, 250,title);
             SDL_RenderPresent(ren); /* present it in the window.*/
         }
         Uint64 currentTick = SDL_GetTicks();
