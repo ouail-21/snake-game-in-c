@@ -28,8 +28,8 @@ void move_one_square(Box* s);
 bool has_been_eaten(Box s, Box* a);
 void add_box(Snake* s);
 void change_position_apple(Box* a);
-void draw_snake(Snake s, SDL_Renderer* ren);
-void draw_apple(Box apple, SDL_Renderer* ren);
+void draw_snake(Snake s, SDL_Renderer* ren,SDL_Texture* h,SDL_Texture* b,SDL_Texture* t);
+void draw_apple(Box apple, SDL_Renderer* ren, SDL_Texture* tapp);
 void move_snake(Snake* s);
 void update_direction(Snake* s);
 Vector2d Add(Vector2d v1, Vector2d v2);
@@ -40,12 +40,17 @@ bool is_collide_with_bonderies(Snake s);
 bool is_collide_with_itself(Snake s);
 int main(){
     srand(time(NULL));
-    Box s = {
+    Box sh = {
         .pos = { .x = 0, .y = 0},
         .length = LENGTH,
         .dir = RIGHT
     };
 
+    Box st = {
+        .pos = { .x = 38, .y = 38},
+        .length = LENGTH,
+        .dir = RIGHT
+    };
     Box apple = {
         .pos = { .x = (rand() % (HEIGHT / LENGTH)) * LENGTH, 
                  .y = (rand() % (HEIGHT / LENGTH)) * LENGTH,
@@ -55,8 +60,9 @@ int main(){
     };
     Snake snake = {
         .tail = 0,
-        .snake[0] = s
+        .snake[0] = sh
     };
+    snake.snake[1] = st;
     if(!SDL_Init(SDL_INIT_VIDEO)){
         SDL_LogError(SDL_LOG_PRIORITY_ERROR,"%s",SDL_GetError());
         return 1;
@@ -78,6 +84,46 @@ int main(){
     SDL_Log("rendering using %s", SDL_GetRendererName(ren));
     SDL_SetRenderLogicalPresentation(ren, WIDTH,HEIGHT,
             SDL_LOGICAL_PRESENTATION_LETTERBOX);
+    SDL_Surface* sapp = SDL_LoadPNG("assets/appele.png");
+    if(!sapp){
+        SDL_LogError(SDL_LOG_PRIORITY_ERROR,"%s",SDL_GetError());
+        SDL_DestroyRenderer(ren);
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return 1;
+    }
+   SDL_Surface* shs = SDL_LoadPNG("assets/snake-head.png");
+    if(!shs){
+        SDL_LogError(SDL_LOG_PRIORITY_ERROR,"%s",SDL_GetError());
+        SDL_DestroyRenderer(ren);
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return 1;
+    }
+   SDL_Surface* sbs = SDL_LoadPNG("assets/snake-body.png");
+    if(!sbs){
+        SDL_LogError(SDL_LOG_PRIORITY_ERROR,"%s",SDL_GetError());
+        SDL_DestroyRenderer(ren);
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return 1;
+    }
+   SDL_Surface* sts = SDL_LoadPNG("assets/snake-tail.png");
+    if(!sts){
+        SDL_LogError(SDL_LOG_PRIORITY_ERROR,"%s",SDL_GetError());
+        SDL_DestroyRenderer(ren);
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return 1;
+    }
+    SDL_Texture* tapp = SDL_CreateTextureFromSurface(ren,sapp);
+    SDL_Texture* tsh = SDL_CreateTextureFromSurface(ren,shs);
+    SDL_Texture* tsb = SDL_CreateTextureFromSurface(ren,sbs);
+    SDL_Texture* tst = SDL_CreateTextureFromSurface(ren,sts);
+    SDL_DestroySurface(sapp);
+    SDL_DestroySurface(shs);
+    SDL_DestroySurface(sbs);
+    SDL_DestroySurface(sts);
     bool running = true; 
     SDL_Event event;
     Uint64 lastTick = 0;
@@ -117,7 +163,7 @@ int main(){
         }
         /* Drawing. */
         if(!pause){
-            SDL_SetRenderDrawColor(ren,200,201,202,255);/* Set the drawing color.*/
+            SDL_SetRenderDrawColor(ren,255,255,255,255);/* Set the drawing color.*/
             SDL_RenderClear(ren); /* clear the previous frame*/
             if(has_been_eaten(snake.snake[0],&apple)){
                 change_position_apple(&apple);
@@ -130,8 +176,8 @@ int main(){
                 snake.snake[0].dir = (Vector2d)RIGHT;
                 pause = true;
             }
-            draw_snake(snake,ren);
-            draw_apple(apple,ren);
+            draw_snake(snake,ren,tsh,tsb,tst);
+            draw_apple(apple,ren,tapp);
             SDL_RenderPresent(ren); /* present it in the window.*/
             move_snake(&snake);
        }
@@ -191,14 +237,56 @@ void change_position_apple(Box* a){
     a->pos.x = (rand() % (WIDTH / LENGTH)) * LENGTH;
     a->pos.y = (rand() % (HEIGHT / LENGTH)) * LENGTH;
 }
-void draw_snake(Snake s, SDL_Renderer* ren){
-    SDL_SetRenderDrawColor(ren,100,100,100,255); /* Set the drawing color.*/
+void draw_snake(Snake s, SDL_Renderer* ren, SDL_Texture* h,SDL_Texture* b,SDL_Texture* t){
     for(size_t i = 0;i <= s.tail; i++){
         const SDL_FRect rect = {s.snake[i].pos.x, s.snake[i].pos.y,
             s.snake[i].length,s.snake[i].length}; 
-        SDL_RenderFillRect(ren,&rect); /* draw a Rectangular and fill it.*/
+        if(i == 0){
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)UP)){
+                SDL_RenderTextureRotated(ren,h,NULL,&rect,90,NULL,SDL_FLIP_VERTICAL);
+            }
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)DOWN)){
+                SDL_RenderTextureRotated(ren,h,NULL,&rect,270,NULL,SDL_FLIP_VERTICAL);
+            }
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)RIGHT)){
+                SDL_RenderTextureRotated(ren,h,NULL,&rect,180,NULL,SDL_FLIP_VERTICAL);
+            }
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)LEFT)){
+                SDL_RenderTextureRotated(ren,h,NULL,&rect,0,NULL,SDL_FLIP_VERTICAL);
+            }
+        }
+        if(i > 0 && i < s.tail){
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)UP)){
+                SDL_RenderTextureRotated(ren,b,NULL,&rect,90,NULL,SDL_FLIP_VERTICAL);
+            }
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)DOWN)){
+                SDL_RenderTextureRotated(ren,b,NULL,&rect,270,NULL,SDL_FLIP_VERTICAL);
+            }
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)RIGHT)){
+                SDL_RenderTextureRotated(ren,b,NULL,&rect,360,NULL,SDL_FLIP_VERTICAL);
+            }
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)LEFT)){
+                SDL_RenderTextureRotated(ren,b,NULL,&rect,180,NULL,SDL_FLIP_VERTICAL);
+            }
+        }
+        if(i > 0 && i == s.tail){
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)UP)){
+                SDL_RenderTextureRotated(ren,t,NULL,&rect,90,NULL,SDL_FLIP_VERTICAL);
+            }
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)DOWN)){
+                SDL_RenderTextureRotated(ren,t,NULL,&rect,270,NULL,SDL_FLIP_VERTICAL);
+            }
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)LEFT)){
+                SDL_RenderTextureRotated(ren,t,NULL,&rect,0,NULL,SDL_FLIP_VERTICAL);
+            }
+            if(is_Vector2d_equal(s.snake[i].dir,(Vector2d)RIGHT)){
+                SDL_RenderTextureRotated(ren,t,NULL,&rect,180,NULL,SDL_FLIP_VERTICAL);
+            }
+        }
     }
 }
+
+
 void move_snake(Snake* s){
     for(size_t i = 0;i <= s->tail; i++){
         move_one_square(&(s->snake[i]));
@@ -226,10 +314,9 @@ bool is_collide_with_bonderies(Snake s){
         return true;
     return false;
 }
-void draw_apple(Box apple, SDL_Renderer* ren){
-    SDL_SetRenderDrawColor(ren,200,200,100,255); /* Set the drawing color.*/
+void draw_apple(Box apple, SDL_Renderer* ren, SDL_Texture* tapp){
     SDL_FRect app = {apple.pos.x,apple.pos.y,apple.length,apple.length}; /* define the coordinates of the Rectangular.*/
-    SDL_RenderFillRect(ren,&app); /* draw a Rectangular and fill it.*/
+    SDL_RenderTexture(ren,tapp,NULL,&app);
 }
 bool is_collide_with_itself(Snake s){
     for(size_t i = 1;i <= s.tail; i++){
